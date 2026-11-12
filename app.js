@@ -40,6 +40,7 @@ app.use(express.urlencoded({ extended: true }));
 app.set('view engine', 'ejs');
 
 // Create a route to test the database
+/*
 app.get('/db-test', async(req, res) => {
     try {
         const orders = await pool.query('SELECT * FROM orders');
@@ -49,6 +50,7 @@ app.get('/db-test', async(req, res) => {
         res.status(500).send('Database error occurred.');
     }
 });
+*/
 
 //Define a default route ("/")
 app.get('/', (req, res) => {
