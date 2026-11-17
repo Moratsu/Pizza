@@ -9,6 +9,9 @@ import mysql2 from 'mysql2';
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Import express-session
+import session from 'express-session';
+
 // Create a connection pool
 const pool = mysql2.createPool({
     host: process.env.DB_HOST,
@@ -21,6 +24,22 @@ const pool = mysql2.createPool({
 //Create an instance of an
 //express application
 const app = express();
+
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 1000 * 60 * 60 }
+}));
+
+function requireLogin(req, res, next) {
+    if (req.session.loggedIn) {
+        next();
+    }
+    else {
+        res.redirect('/login');
+    }
+}
 
 //Define a port number for
 //our server to listen on
@@ -61,6 +80,38 @@ app.get('/', (req, res) => {
 //Add a contact route to display a contact view page
 app.get('/contact-us', (req, res) => {
     res.render('contact');
+});
+
+// Add a route for the login page
+app.post('/login', (req, res) => {
+
+    // Get the values the user typed into the form
+    const username = req.body.username;
+    const password = req.body.password;
+
+    // Compare them to the username and password stored in .env
+    if (username === process.env.ADMIN_USER &&
+        password === process.env.ADMIN_PASSWORD) {
+
+            // Correct! Remember that this user is logged in
+            req.session.loggedIn = true;
+
+            // Send them to the admin page
+            res.redirect('/admin');
+        }
+        else {
+            res.render('login', { error: 'Invalid username or password' });
+        }
+});
+
+app.get('/login', (req, res) => {
+    res.render('login', { error: null });
+});
+
+app.get('/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.redirect('/login');
+    });
 });
 
 //Add a route to display a menu page
@@ -112,7 +163,7 @@ app.post('/submit-order', async(req, res) => {
 });
 
 //Add an admin route
-app.get('/admin', async(req, res) => {
+app.get('/admin', requireLogin, async(req, res) => {
 
     try {
         const [orders] = await pool.query('SELECT * FROM orders ORDER BY timestamp DESC');
